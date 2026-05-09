@@ -21,7 +21,7 @@
      ============================================================ -->
 <script>
   const YT_API_KEY     = 'AIzaSyD-h5o5TjeSTN6OZfV96Oo-TatER2b36-E';   // YouTube Data API v3
-  const OAUTH_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID';        // ← paste here
+  const OAUTH_CLIENT_ID = '1009974029169-2rn8dd9k7svfvve83kvqjq7bvbfcfki0.apps.googleusercontent.com';        // OAuth 2.0 Client ID
   const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/youtube.force-ssl';
 </script>
 
@@ -753,7 +753,7 @@ Rules:
 - No preamble, just the comment text itself`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://icy-dew-ff45.vivienmoss1.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
