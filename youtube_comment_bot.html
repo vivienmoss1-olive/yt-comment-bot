@@ -4,883 +4,255 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YouTube Comment Bot</title>
-
-<!-- ============================================================
-     SETUP REQUIRED — Fill in your keys before using this app
-     ============================================================
-     1. YouTube Data API v3 key:
-        → https://console.cloud.google.com → APIs & Services → Credentials → Create API Key
-        → Enable "YouTube Data API v3" in your project
-
-     2. OAuth 2.0 Client ID:
-        → Same console → Credentials → Create OAuth Client ID → Web Application
-        → Add http://localhost or your domain to Authorized JS Origins
-        → Add your domain to Authorized Redirect URIs
-
-     3. Paste both below:
-     ============================================================ -->
 <script>
-  const YT_API_KEY     = 'AIzaSyD-h5o5TjeSTN6OZfV96Oo-TatER2b36-E';   // YouTube Data API v3
-  const OAUTH_CLIENT_ID = '1009974029169-2rn8dd9k7svfvve83kvqjq7bvbfcfki0.apps.googleusercontent.com';        // OAuth 2.0 Client ID
+  const YT_API_KEY      = 'AIzaSyD-h5o5TjeSTN6OZfV96Oo-TatER2b36-E';
+  const OAUTH_CLIENT_ID = '1009974029169-2rn8dd9k7svfvve83kvqjq7bvbfcfki0.apps.googleusercontent.com';
+  const WORKER_URL      = 'https://icy-dew-ff45.vivienmoss1.workers.dev';
   const OAUTH_SCOPE     = 'https://www.googleapis.com/auth/youtube.force-ssl';
 </script>
-
-<!-- Google API client for OAuth -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg: #08090a;
-  --surface: #111214;
-  --surface2: #18191c;
-  --surface3: #1f2024;
-  --border: #272829;
-  --border2: #333;
-  --accent: #ff0000;
-  --accent-glow: rgba(255,0,0,0.15);
-  --gold: #f5c518;
-  --text: #eeeae2;
-  --muted: #6b6e75;
-  --green: #3ecf8e;
-  --red: #f04444;
-  --blue: #4a9eff;
-}
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  min-height: 100vh;
-  padding: 0;
-  background-image:
-    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(255,0,0,0.07) 0%, transparent 70%);
-}
-
-/* ─── Header ─── */
-.header {
-  border-bottom: 1px solid var(--border);
-  padding: 20px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(8,9,10,0.9);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-icon {
-  width: 34px; height: 34px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-}
-
-.brand-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-.brand-name span { color: var(--accent); }
-
-.auth-area {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.auth-badge {
-  font-size: 11px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border2);
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.auth-badge.connected {
-  border-color: rgba(62,207,142,0.4);
-  color: var(--green);
-  background: rgba(62,207,142,0.06);
-}
-
-.dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* ─── Main layout ─── */
-.main {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 40px 24px 80px;
-}
-
-/* ─── Search bar ─── */
-.search-wrap {
-  margin-bottom: 32px;
-}
-
-.search-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-  display: block;
-}
-
-.search-row {
-  display: flex;
-  gap: 10px;
-}
-
-.search-input {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 14px 18px;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.search-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-.search-input::placeholder { color: var(--muted); }
-
-/* ─── Buttons ─── */
-.btn {
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: none;
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  letter-spacing: 0.4px;
-  transition: all 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-}
-
-.btn-red {
-  background: var(--accent);
-  color: white;
-}
-.btn-red:hover { background: #cc0000; }
-.btn-red:disabled { background: #4a0000; color: #666; cursor: not-allowed; }
-
-.btn-ghost {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border2);
-}
-.btn-ghost:hover { border-color: #555; background: var(--surface3); }
-
-.btn-green {
-  background: rgba(62,207,142,0.12);
-  color: var(--green);
-  border: 1px solid rgba(62,207,142,0.3);
-}
-.btn-green:hover { background: rgba(62,207,142,0.2); }
-.btn-green:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.btn-sm {
-  padding: 8px 14px;
-  font-size: 11px;
-  border-radius: 7px;
-}
-
-/* ─── Results ─── */
-.results-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.results-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.video-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  margin-bottom: 20px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-  animation: fadeUp 0.3s ease both;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.video-card:hover { border-color: var(--border2); }
-
-.video-top {
-  display: flex;
-  gap: 16px;
-  padding: 18px;
-}
-
-.video-thumb {
-  width: 140px;
-  height: 82px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: var(--surface3);
-}
-
-.video-meta {
-  flex: 1;
-  min-width: 0;
-}
-
-.video-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.4;
-  margin-bottom: 8px;
-  color: var(--text);
-}
-
-.video-date {
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 6px;
-}
-
-.video-desc {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.6;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.video-actions {
-  padding: 0 18px 14px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-/* ─── Comment section ─── */
-.comment-section {
-  border-top: 1px solid var(--border);
-  padding: 16px 18px;
-  display: none;
-}
-
-.comment-section.open { display: block; }
-
-.comment-generating {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  padding: 10px 0;
-}
-
-.mini-spinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.15);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.comment-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.comment-box {
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: var(--text);
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
-  line-height: 1.7;
-  margin-bottom: 12px;
-  min-height: 60px;
-}
-
-.comment-edit {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  line-height: 1.7;
-  margin-bottom: 12px;
-  resize: vertical;
-  min-height: 80px;
-  outline: none;
-  display: none;
-}
-
-.comment-btns {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.posted-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 7px;
-  background: rgba(62,207,142,0.08);
-  border: 1px solid rgba(62,207,142,0.25);
-  color: var(--green);
-  font-size: 11px;
-  letter-spacing: 0.3px;
-}
-
-/* ─── Status toast ─── */
-.toast {
-  position: fixed;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0;
-  transition: all 0.25s;
-  pointer-events: none;
-  z-index: 999;
-  white-space: nowrap;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.toast.success { border-color: rgba(62,207,142,0.4); color: var(--green); }
-.toast.error { border-color: rgba(240,68,68,0.4); color: var(--red); }
-.toast.info { border-color: rgba(74,158,255,0.4); color: var(--blue); }
-
-/* ─── Empty / loading states ─── */
-.state-msg {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.8;
-}
-
-.state-msg .icon { font-size: 36px; margin-bottom: 14px; display: block; }
-
-/* ─── Auth signin button ─── */
-.signin-btn {
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 8px 16px;
-  color: var(--text);
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s;
-}
-
-.signin-btn:hover { border-color: var(--blue); color: var(--blue); }
-
-.spinner-full {
-  width: 18px; height: 18px;
-  border: 2px solid rgba(255,255,255,0.15);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#08090a;--surface:#111214;--surface2:#18191c;--surface3:#1f2024;--border:#272829;--border2:#333;--accent:#ff0000;--accent-glow:rgba(255,0,0,0.15);--gold:#f5c518;--text:#eeeae2;--muted:#6b6e75;--green:#3ecf8e;--red:#f04444;--blue:#4a9eff}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;background-image:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(255,0,0,0.07) 0%,transparent 70%)}
+.header{border-bottom:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(8,9,10,0.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-icon{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.brand-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700}
+.brand-name span{color:var(--accent)}
+.auth-area{display:flex;align-items:center;gap:10px}
+.auth-badge{font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);display:flex;align-items:center;gap:6px}
+.auth-badge.connected{border-color:rgba(62,207,142,0.4);color:var(--green);background:rgba(62,207,142,0.06)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.main{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+.search-wrap{margin-bottom:32px}
+.search-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:block}
+.search-row{display:flex;gap:10px}
+.search-input{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px 18px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s}
+.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-input::placeholder{color:var(--muted)}
+.btn{padding:12px 20px;border-radius:10px;border:none;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:0.4px;transition:all 0.15s;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn-red{background:var(--accent);color:white}
+.btn-red:hover{background:#cc0000}
+.btn-red:disabled{background:#4a0000;color:#666;cursor:not-allowed}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:#555;background:var(--surface3)}
+.btn-green{background:rgba(62,207,142,0.12);color:var(--green);border:1px solid rgba(62,207,142,0.3)}
+.btn-green:hover{background:rgba(62,207,142,0.2)}
+.btn-green:disabled{opacity:0.4;cursor:not-allowed}
+.btn-sm{padding:8px 14px;font-size:11px;border-radius:7px}
+.signin-btn{background:transparent;border:1px solid var(--border2);border-radius:8px;padding:8px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s}
+.signin-btn:hover{border-color:var(--blue);color:var(--blue)}
+.results-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.results-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.video-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:20px;overflow:hidden;transition:border-color 0.2s;animation:fadeUp 0.3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.video-card:hover{border-color:var(--border2)}
+.video-top{display:flex;gap:16px;padding:18px}
+.video-thumb{width:140px;height:82px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--surface3)}
+.video-meta{flex:1;min-width:0}
+.video-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;line-height:1.4;margin-bottom:8px}
+.video-date{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.video-desc{font-size:12px;color:var(--muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.video-actions{padding:0 18px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.comment-section{border-top:1px solid var(--border);padding:16px 18px;display:none}
+.comment-section.open{display:block}
+.comment-generating{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;padding:10px 0}
+.mini-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.15);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.comment-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.comment-box{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text);font-family:'Playfair Display',serif;font-style:italic;line-height:1.7;margin-bottom:12px;min-height:60px}
+.comment-edit{width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text);font-family:'DM Mono',monospace;line-height:1.7;margin-bottom:12px;resize:vertical;min-height:80px;outline:none;display:none}
+.comment-btns{display:flex;gap:8px;flex-wrap:wrap}
+.posted-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;background:rgba(62,207,142,0.08);border:1px solid rgba(62,207,142,0.25);color:var(--green);font-size:11px}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:12px;color:var(--text);opacity:0;transition:all 0.25s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(62,207,142,0.4);color:var(--green)}
+.toast.error{border-color:rgba(240,68,68,0.4);color:var(--red)}
+.toast.info{border-color:rgba(74,158,255,0.4);color:var(--blue)}
+.state-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;line-height:1.8}
+.state-msg .icon{font-size:36px;margin-bottom:14px;display:block}
+.spinner-full{width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite}
 </style>
 </head>
 <body>
-
-<!-- Header -->
 <div class="header">
   <div class="brand">
     <div class="brand-icon">▶</div>
-    <div>
-      <div class="brand-name">YT <span>Comment</span> Bot</div>
-    </div>
+    <div class="brand-name">YT <span>Comment</span> Bot</div>
   </div>
   <div class="auth-area">
-    <div class="auth-badge" id="authBadge">
-      <div class="dot"></div>
-      <span id="authLabel">Not signed in</span>
-    </div>
-    <button class="signin-btn" id="signinBtn" onclick="handleAuthClick()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
-      Sign in with Google
-    </button>
+    <div class="auth-badge" id="authBadge"><div class="dot"></div><span id="authLabel">Not signed in</span></div>
+    <button class="signin-btn" id="signinBtn" onclick="handleAuthClick()">Sign in with Google</button>
   </div>
 </div>
-
-<!-- Main -->
 <div class="main">
-
-  <!-- Search -->
   <div class="search-wrap">
     <span class="search-label">Search YouTube</span>
     <div class="search-row">
-      <input
-        type="text"
-        class="search-input"
-        id="searchInput"
-        placeholder="e.g. 'startup advice for founders 2024', 'deep sea creatures documentary'..."
-        onkeydown="if(event.key==='Enter') searchYouTube()"
-      />
+      <input type="text" class="search-input" id="searchInput" placeholder="e.g. 'best productivity tips', 'ocean documentary'..." onkeydown="if(event.key==='Enter') searchYouTube()"/>
       <button class="btn btn-red" id="searchBtn" onclick="searchYouTube()">
         <div class="spinner-full" id="searchSpinner" style="display:none;"></div>
-        <span id="searchBtnText">🔍 Search</span>
+        <span id="searchBtnText">Search</span>
       </button>
     </div>
   </div>
-
-  <!-- Results area -->
   <div id="resultsArea">
     <div class="state-msg">
       <span class="icon">🎬</span>
-      Search for a YouTube video above, then generate and post an AI-drafted comment — after your approval.
+      Search for a YouTube video above.<br>Generate an AI comment, review it, then post it under your Google account.
     </div>
   </div>
-
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
-
 <script>
-// ─── Auth state ───
-let accessToken = null;
-let userEmail = '';
+let accessToken=null,userEmail='';
 
-function handleAuthClick() {
-  if (accessToken) {
-    // Sign out
-    accessToken = null;
-    userEmail = '';
-    updateAuthUI(false);
-    showToast('Signed out', 'info');
-    return;
-  }
-
-  if (OAUTH_CLIENT_ID === 'YOUR_OAUTH_CLIENT_ID') {
-    showToast('⚠ Add your OAuth Client ID to enable sign-in', 'error');
-    return;
-  }
-
-  // Use Google Identity Services token flow
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: OAUTH_CLIENT_ID,
-    scope: OAUTH_SCOPE,
-    callback: (response) => {
-      if (response.error) {
-        showToast('Sign-in failed: ' + response.error, 'error');
-        return;
-      }
-      accessToken = response.access_token;
-      fetchUserInfo();
+function handleAuthClick(){
+  if(accessToken){accessToken=null;userEmail='';updateAuthUI(false);showToast('Signed out','info');return}
+  const client=google.accounts.oauth2.initTokenClient({
+    client_id:OAUTH_CLIENT_ID,
+    scope:OAUTH_SCOPE,
+    callback:async function(r){
+      if(r.error){showToast('Sign-in failed: '+r.error,'error');return}
+      accessToken=r.access_token;
+      try{
+        const res=await fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+accessToken}});
+        const info=await res.json();
+        userEmail=info.email||'Google account';
+      }catch(e){}
+      updateAuthUI(true);
+      showToast('Signed in as '+userEmail,'success');
     }
   });
   client.requestAccessToken();
 }
 
-async function fetchUserInfo() {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    const info = await res.json();
-    userEmail = info.email || 'Google account';
-    updateAuthUI(true);
-    showToast('✓ Signed in as ' + userEmail, 'success');
-  } catch {
-    updateAuthUI(true);
-  }
+function updateAuthUI(connected){
+  document.getElementById('authBadge').classList.toggle('connected',connected);
+  document.getElementById('authLabel').textContent=connected?(userEmail||'Connected'):'Not signed in';
+  document.getElementById('signinBtn').textContent=connected?'Sign out':'Sign in with Google';
 }
 
-function updateAuthUI(connected) {
-  const badge = document.getElementById('authBadge');
-  const label = document.getElementById('authLabel');
-  const btn = document.getElementById('signinBtn');
-  if (connected) {
-    badge.classList.add('connected');
-    label.textContent = userEmail || 'Connected';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Sign out`;
-  } else {
-    badge.classList.remove('connected');
-    label.textContent = 'Not signed in';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg> Sign in with Google`;
-  }
-}
-
-// ─── YouTube Search ───
-async function searchYouTube() {
-  const query = document.getElementById('searchInput').value.trim();
-  if (!query) { showToast('Enter something to search', 'error'); return; }
-
-  if (YT_API_KEY === 'YOUR_YOUTUBE_DATA_API_KEY') {
-    showToast('⚠ Add your YouTube Data API key to search', 'error');
-    // Demo mode: show fake results
-    renderDemoResults(query);
-    return;
-  }
-
+async function searchYouTube(){
+  const query=document.getElementById('searchInput').value.trim();
+  if(!query){showToast('Enter something to search','error');return}
   setSearchLoading(true);
-
-  try {
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=5&key=${YT_API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.error) {
-      showToast('YouTube API error: ' + data.error.message, 'error');
-      setSearchLoading(false);
-      return;
-    }
-
-    renderResults(data.items || []);
-  } catch (e) {
-    showToast('Search failed — check your API key and network', 'error');
-  }
-
+  try{
+    const url='https://www.googleapis.com/youtube/v3/search?part=snippet&q='+encodeURIComponent(query)+'&type=video&maxResults=5&key='+YT_API_KEY;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.error){showToast('YouTube error: '+data.error.message,'error');setSearchLoading(false);return}
+    renderResults(data.items||[]);
+  }catch(e){showToast('Search failed: '+e.message,'error')}
   setSearchLoading(false);
 }
 
-function renderResults(items) {
-  const area = document.getElementById('resultsArea');
-
-  if (!items.length) {
-    area.innerHTML = `<div class="state-msg"><span class="icon">🤷</span>No videos found. Try a different search.</div>`;
-    return;
-  }
-
-  area.innerHTML = `<div class="results-label">${items.length} videos found</div>`;
-
-  items.forEach((item, i) => {
-    const vid = item.id.videoId || (item.id && item.id) || '';
-    const s = item.snippet;
-    const date = new Date(s.publishedAt).toLocaleDateString('en-AU', { year:'numeric', month:'long', day:'numeric' });
-    const thumb = s.thumbnails?.medium?.url || s.thumbnails?.default?.url || '';
-    const desc = s.description || 'No description available.';
-    const title = s.title || 'Untitled';
-
-    const card = document.createElement('div');
-    card.className = 'video-card';
-    card.style.animationDelay = (i * 0.07) + 's';
-    card.innerHTML = `
-      <div class="video-top">
-        <img class="video-thumb" src="${escHtml(thumb)}" alt="" onerror="this.style.background='#1f2024'">
-        <div class="video-meta">
-          <div class="video-date">📅 ${date}</div>
-          <div class="video-title">${escHtml(title)}</div>
-          <div class="video-desc">${escHtml(desc)}</div>
-        </div>
-      </div>
-      <div class="video-actions">
-        <a href="https://youtube.com/watch?v=${escHtml(vid)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">
-          ▶ Watch on YouTube
-        </a>
-        <button class="btn btn-ghost btn-sm" onclick="openCommentSection(${i}, this)" data-open="false">
-          💬 Generate Comment
-        </button>
-      </div>
-      <div class="comment-section" id="cs-${i}">
-        <!-- populated dynamically -->
-      </div>
-    `;
-
-    // Store video data on element for later use
-    card.dataset.videoId = vid;
-    card.dataset.title = title;
-    card.dataset.desc = desc;
-
+function renderResults(items){
+  const area=document.getElementById('resultsArea');
+  if(!items.length){area.innerHTML='<div class="state-msg"><span class="icon">🤷</span>No videos found.</div>';return}
+  area.innerHTML='<div class="results-label">'+items.length+' videos found</div>';
+  items.forEach(function(item,i){
+    const vid=item.id.videoId||'';
+    const s=item.snippet;
+    const date=new Date(s.publishedAt).toLocaleDateString('en-AU',{year:'numeric',month:'long',day:'numeric'});
+    const thumb=(s.thumbnails&&s.thumbnails.medium)?s.thumbnails.medium.url:'';
+    const title=s.title||'Untitled';
+    const desc=s.description||'No description available.';
+    const card=document.createElement('div');
+    card.className='video-card';
+    card.style.animationDelay=(i*0.07)+'s';
+    card.dataset.videoId=vid;
+    card.dataset.title=title;
+    card.dataset.desc=desc;
+    card.innerHTML='<div class="video-top"><img class="video-thumb" src="'+esc(thumb)+'" alt="" onerror="this.style.background=\'#1f2024\'"><div class="video-meta"><div class="video-date">📅 '+date+'</div><div class="video-title">'+esc(title)+'</div><div class="video-desc">'+esc(desc)+'</div></div></div><div class="video-actions"><a href="https://youtube.com/watch?v='+esc(vid)+'" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">▶ Watch on YouTube</a><button class="btn btn-ghost btn-sm" onclick="toggleComment('+i+',this)">💬 Generate Comment</button></div><div class="comment-section" id="cs-'+i+'"></div>';
     area.appendChild(card);
   });
 }
 
-// ─── Demo mode (no API key) ───
-function renderDemoResults(query) {
-  const fakeItems = [
-    {
-      id: { videoId: 'dQw4w9WgXcQ' },
-      snippet: {
-        publishedAt: '2024-03-15T10:00:00Z',
-        title: `[DEMO] Top insights on: ${query}`,
-        description: 'This is a demo result. Add your YouTube Data API key to see real search results. This placeholder shows you how the card layout looks with a real video.',
-        thumbnails: { medium: { url: 'https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg' } }
-      }
-    },
-    {
-      id: { videoId: 'jNQXAC9IVRw' },
-      snippet: {
-        publishedAt: '2024-01-08T14:30:00Z',
-        title: `[DEMO] A deep dive: ${query}`,
-        description: 'Second demo result. In live mode, these cards show real YouTube videos matching your search, with actual thumbnails, dates, and descriptions.',
-        thumbnails: { medium: { url: 'https://img.youtube.com/vi/jNQXAC9IVRw/mqdefault.jpg' } }
-      }
-    }
-  ];
-
-  showToast('Demo mode — add API key for real results', 'info');
-  renderResults(fakeItems);
-}
-
-// ─── Comment section ───
-async function openCommentSection(i, btn) {
-  const cs = document.getElementById(`cs-${i}`);
-  const card = btn.closest('.video-card');
-
-  if (btn.dataset.open === 'true') {
-    cs.classList.remove('open');
-    btn.dataset.open = 'false';
-    btn.textContent = '💬 Generate Comment';
-    return;
-  }
-
-  btn.dataset.open = 'true';
-  btn.textContent = '▲ Hide';
+async function toggleComment(i,btn){
+  const cs=document.getElementById('cs-'+i);
+  const card=btn.closest('.video-card');
+  if(cs.classList.contains('open')){cs.classList.remove('open');btn.textContent='💬 Generate Comment';return}
+  btn.textContent='▲ Hide';
   cs.classList.add('open');
-
-  const title = card.dataset.title;
-  const desc = card.dataset.desc;
-  const videoId = card.dataset.videoId;
-
-  cs.innerHTML = `
-    <div class="comment-generating">
-      <div class="mini-spinner"></div>
-      <span>Claude is drafting a thoughtful comment...</span>
-    </div>
-  `;
-
-  const comment = await generateComment(title, desc);
-
-  cs.innerHTML = `
-    <div class="comment-label">AI-Drafted Comment — Review before posting</div>
-    <div class="comment-box" id="cbox-${i}">${escHtml(comment)}</div>
-    <textarea class="comment-edit" id="cedit-${i}">${escHtml(comment)}</textarea>
-    <div class="comment-btns" id="cbtns-${i}">
-      <button class="btn btn-ghost btn-sm" onclick="toggleEdit(${i})">✎ Edit</button>
-      <button class="btn btn-ghost btn-sm" onclick="regenerateComment(${i}, '${encodeURIComponent(title)}', '${encodeURIComponent(desc)}')">↻ Regenerate</button>
-      <button class="btn btn-green btn-sm" onclick="approveAndPost(${i}, '${escHtml(videoId)}')" id="postBtn-${i}">
-        ✓ Approve &amp; Post
-      </button>
-    </div>
-    <div id="posted-${i}"></div>
-  `;
+  cs.innerHTML='<div class="comment-generating"><div class="mini-spinner"></div> Claude is drafting a comment...</div>';
+  const comment=await generateComment(card.dataset.title,card.dataset.desc,card.dataset.videoId);
+  cs.innerHTML='<div class="comment-label">AI-Drafted Comment — Review before posting</div><div class="comment-box" id="cbox-'+i+'">'+esc(comment)+'</div><textarea class="comment-edit" id="cedit-'+i+'">'+esc(comment)+'</textarea><div class="comment-btns" id="cbtns-'+i+'"><button class="btn btn-ghost btn-sm" onclick="toggleEdit('+i+')">✎ Edit</button><button class="btn btn-ghost btn-sm" onclick="regen('+i+',this)">↻ Regenerate</button><button class="btn btn-green btn-sm" id="postBtn-'+i+'" data-vid="'+esc(card.dataset.videoId)+'" onclick="doPost('+i+')">✓ Approve &amp; Post</button></div><div id="posted-'+i+'"></div>';
 }
 
-async function generateComment(title, desc) {
-  const prompt = `You are a genuine YouTube viewer. Write ONE thoughtful, human comment for this video.
-
-Video title: ${title}
-Video description: ${desc.slice(0, 300)}
-
-Rules:
-- Sound like a real person who watched it, NOT a bot
-- Be either thought-provoking, supportive, or start a meaningful discussion
-- 1–3 sentences max
-- No hollow praise like "Great video!" — be specific
-- No hashtags, no emojis unless truly natural
-- No preamble, just the comment text itself`;
-
-  try {
-    const res = await fetch('https://icy-dew-ff45.vivienmoss1.workers.dev', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }]
+async function generateComment(title,desc){
+  const prompt='You are a genuine YouTube viewer. Write ONE thoughtful human comment for this video.\nTitle: '+title+'\nDescription: '+desc.slice(0,300)+'\nRules: sound like a real person, 1-3 sentences, no hollow praise like Great video, no hashtags. Return ONLY the comment text nothing else.';
+  try{
+    const res=await fetch(WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-3-5-sonnet-20241022',
+        max_tokens:300,
+        messages:[{role:'user',content:prompt}]
       })
     });
-    const data = await res.json();
-    return data.content?.map(b => b.text || '').join('').trim() || 'Could not generate comment.';
-  } catch {
-    return 'Could not reach Claude API. Check your connection and try again.';
-  }
-}
-
-function toggleEdit(i) {
-  const box = document.getElementById(`cbox-${i}`);
-  const edit = document.getElementById(`cedit-${i}`);
-  const isEditing = edit.style.display === 'block';
-
-  if (isEditing) {
-    // Save edit
-    box.textContent = edit.value;
-    box.style.display = 'block';
-    edit.style.display = 'none';
-  } else {
-    edit.value = box.textContent;
-    box.style.display = 'none';
-    edit.style.display = 'block';
-    edit.focus();
-  }
-}
-
-async function regenerateComment(i, encodedTitle, encodedDesc) {
-  const box = document.getElementById(`cbox-${i}`);
-  const edit = document.getElementById(`cedit-${i}`);
-  box.style.display = 'block';
-  edit.style.display = 'none';
-
-  box.innerHTML = `<span style="color:var(--muted);font-style:normal;font-size:12px;display:flex;align-items:center;gap:8px;"><span class="mini-spinner" style="display:inline-block;"></span> Regenerating...</span>`;
-
-  const comment = await generateComment(decodeURIComponent(encodedTitle), decodeURIComponent(encodedDesc));
-  box.textContent = comment;
-  edit.value = comment;
-}
-
-async function approveAndPost(i, videoId) {
-  const commentText = (document.getElementById(`cedit-${i}`).style.display === 'block')
-    ? document.getElementById(`cedit-${i}`).value.trim()
-    : document.getElementById(`cbox-${i}`).textContent.trim();
-
-  if (!commentText) { showToast('Comment is empty', 'error'); return; }
-
-  if (!accessToken) {
-    showToast('Sign in with Google first to post comments', 'error');
-    return;
-  }
-
-  const postBtn = document.getElementById(`postBtn-${i}`);
-  postBtn.disabled = true;
-  postBtn.innerHTML = '<div class="mini-spinner"></div> Posting...';
-
-  try {
-    const res = await fetch('https://www.googleapis.com/youtube/v3/commentThreads?part=snippet', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + accessToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        snippet: {
-          videoId: videoId,
-          topLevelComment: {
-            snippet: { textOriginal: commentText }
-          }
-        }
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      showToast('Post failed: ' + data.error.message, 'error');
-      postBtn.disabled = false;
-      postBtn.innerHTML = '✓ Approve & Post';
-      return;
+    if(!res.ok){
+      const t=await res.text();
+      console.error('Worker error',res.status,t);
+      return'Error '+res.status+': '+t.slice(0,100);
     }
-
-    // Success
-    document.getElementById(`cbtns-${i}`).style.display = 'none';
-    document.getElementById(`posted-${i}`).innerHTML = `
-      <div class="posted-badge" style="margin-top:10px;">
-        ✓ Posted as ${escHtml(userEmail)} · <a href="https://youtube.com/watch?v=${escHtml(videoId)}" target="_blank" style="color:inherit;">View on YouTube ↗</a>
-      </div>`;
-    showToast('Comment posted successfully!', 'success');
-
-  } catch (e) {
-    showToast('Network error — try again', 'error');
-    postBtn.disabled = false;
-    postBtn.innerHTML = '✓ Approve & Post';
+    const data=await res.json();
+    if(data.error){console.error('Claude error',data.error);return'Claude error: '+(data.error.message||JSON.stringify(data.error))}
+    return(data.content&&data.content[0])?data.content[0].text.trim():'No comment generated.';
+  }catch(e){
+    console.error('Fetch error',e);
+    return'Network error: '+e.message;
   }
 }
 
-// ─── Utilities ───
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
+function toggleEdit(i){
+  const box=document.getElementById('cbox-'+i);
+  const edit=document.getElementById('cedit-'+i);
+  if(edit.style.display==='block'){box.textContent=edit.value;box.style.display='block';edit.style.display='none'}
+  else{edit.value=box.textContent;box.style.display='none';edit.style.display='block';edit.focus()}
 }
 
-function setSearchLoading(on) {
-  document.getElementById('searchBtn').disabled = on;
-  document.getElementById('searchSpinner').style.display = on ? 'block' : 'none';
-  document.getElementById('searchBtnText').textContent = on ? 'Searching...' : '🔍 Search';
+async function regen(i,btn){
+  const card=btn.closest('.video-card');
+  const box=document.getElementById('cbox-'+i);
+  const edit=document.getElementById('cedit-'+i);
+  box.style.display='block';edit.style.display='none';
+  box.innerHTML='<span style="color:var(--muted);font-style:normal;display:flex;align-items:center;gap:8px;font-size:12px"><span class="mini-spinner"></span> Regenerating...</span>';
+  const c=await generateComment(card.dataset.title,card.dataset.desc);
+  box.textContent=c;edit.value=c;
 }
 
+async function doPost(i){
+  const btn=document.getElementById('postBtn-'+i);
+  const vid=btn.dataset.vid;
+  const editEl=document.getElementById('cedit-'+i);
+  const boxEl=document.getElementById('cbox-'+i);
+  const text=(editEl.style.display==='block'?editEl.value:boxEl.textContent).trim();
+  if(!text){showToast('Comment is empty','error');return}
+  if(!accessToken){showToast('Sign in with Google first','error');return}
+  btn.disabled=true;
+  btn.innerHTML='<div class="mini-spinner"></div> Posting...';
+  try{
+    const res=await fetch('https://www.googleapis.com/youtube/v3/commentThreads?part=snippet',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+      body:JSON.stringify({snippet:{videoId:vid,topLevelComment:{snippet:{textOriginal:text}}}})
+    });
+    const data=await res.json();
+    if(data.error){showToast('Post failed: '+data.error.message,'error');btn.disabled=false;btn.innerHTML='✓ Approve & Post';return}
+    document.getElementById('cbtns-'+i).style.display='none';
+    document.getElementById('posted-'+i).innerHTML='<div class="posted-badge" style="margin-top:10px;">✓ Posted as '+esc(userEmail)+' · <a href="https://youtube.com/watch?v='+esc(vid)+'" target="_blank" style="color:inherit;margin-left:4px;">View on YouTube ↗</a></div>';
+    showToast('Comment posted!','success');
+  }catch(e){showToast('Network error: '+e.message,'error');btn.disabled=false;btn.innerHTML='✓ Approve & Post'}
+}
+
+function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function setSearchLoading(on){document.getElementById('searchBtn').disabled=on;document.getElementById('searchSpinner').style.display=on?'block':'none';document.getElementById('searchBtnText').textContent=on?'Searching...':'Search'}
 let toastTimer;
-function showToast(msg, type = 'info') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.className = 'toast', 3500);
-}
+function showToast(msg,type){type=type||'info';const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.className='toast'},3500)}
 </script>
 </body>
 </html>
